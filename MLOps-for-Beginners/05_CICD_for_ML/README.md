@@ -10,6 +10,9 @@ If tests pass, the code (or model) is automatically deployed.
 
 Together, they prevent broken code from reaching users.
 
+<img width="1024" height="559" alt="image" src="https://github.com/user-attachments/assets/fbd7e74f-5464-4507-8ef0-5ae9cf785d8b" />
+
+
 ## Why ML Needs CI/CD
 
 Without CI/CD:

@@ -80,7 +80,7 @@ def build_ann_model(input_dim: int) -> Sequential:
 
 def train_pipeline(dataset_path: str, results_dir: str, epochs: int, batch_size: int):
     """Train ANN model, evaluate, and save metrics/artifacts."""
-    os.makedirs(results_dir, mode=0o755, exist_ok=True)
+    os.makedirs(results_dir, mode=0o700, exist_ok=True)
     print(f"Loading dataset from: {dataset_path}")
     raw_df = pd.read_csv(dataset_path)
 

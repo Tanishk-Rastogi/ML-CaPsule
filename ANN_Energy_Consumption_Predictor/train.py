@@ -181,32 +181,36 @@ def train_pipeline(dataset_path: str, results_dir: str, epochs: int, batch_size:
     with open(metrics_path, "w") as f:
         json.dump(metrics, f, indent=4)
 
-    # Plot Loss Curve
-    plt.figure(figsize=(8, 5))
-    plt.plot(history.history['loss'], label='Train Loss (MSE)', color='#2b5c8f')
-    plt.plot(history.history['val_loss'], label='Val Loss (MSE)', color='#d9534f', linestyle='--')
-    plt.title('ANN Training & Validation Loss Curve')
-    plt.xlabel('Epochs')
-    plt.ylabel('Loss (MSE)')
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.savefig(os.path.join(safe_results_dir, "training_loss_curve.png"), dpi=200)
-    plt.close()
+    # Compile plots into a single PDF
+    from matplotlib.backends.backend_pdf import PdfPages
+    pdf_path = os.path.join(safe_results_dir, "evaluation_plots.pdf")
+    with PdfPages(pdf_path) as pdf:
+        # Plot Loss Curve
+        plt.figure(figsize=(8, 5))
+        plt.plot(history.history['loss'], label='Train Loss (MSE)', color='#2b5c8f')
+        plt.plot(history.history['val_loss'], label='Val Loss (MSE)', color='#d9534f', linestyle='--')
+        plt.title('ANN Training & Validation Loss Curve')
+        plt.xlabel('Epochs')
+        plt.ylabel('Loss (MSE)')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        pdf.savefig()
+        plt.close()
 
-    # Plot Actual vs Predicted
-    plt.figure(figsize=(9, 5))
-    plt.scatter(y_test[:300], y_pred[:300], alpha=0.6, color='#2b5c8f', edgecolors='k', s=30, label='Predictions')
-    plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2, label='Ideal Fit')
-    plt.title('Actual vs Predicted Energy Consumption (Appliances)')
-    plt.xlabel('Actual Energy (Wh)')
-    plt.ylabel('Predicted Energy (Wh)')
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.savefig(os.path.join(safe_results_dir, "actual_vs_predicted.png"), dpi=200)
-    plt.close()
-    print(f"Saved evaluation plots to: {safe_results_dir}/")
+        # Plot Actual vs Predicted
+        plt.figure(figsize=(9, 5))
+        plt.scatter(y_test[:300], y_pred[:300], alpha=0.6, color='#2b5c8f', edgecolors='k', s=30, label='Predictions')
+        plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2, label='Ideal Fit')
+        plt.title('Actual vs Predicted Energy Consumption (Appliances)')
+        plt.xlabel('Actual Energy (Wh)')
+        plt.ylabel('Predicted Energy (Wh)')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        pdf.savefig()
+        plt.close()
+    print(f"Saved evaluation plots PDF to: {pdf_path}")
 
 
 def predict_pipeline(input_csv: str, results_dir: str):

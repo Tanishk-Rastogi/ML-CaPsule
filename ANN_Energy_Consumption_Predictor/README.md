@@ -32,8 +32,7 @@ ANN_Energy_Consumption_Predictor/
 │   ├── energy_model.keras       # Saved Keras ANN model
 │   ├── scaler.pkl               # Fitted StandardScaler & feature names
 │   ├── metrics.json             # Model evaluation performance metrics
-│   ├── training_loss_curve.png  # Training vs Validation loss visualization
-│   └── actual_vs_predicted.png  # Scatter plot of actual vs predicted energy
+│   └── evaluation_plots.pdf     # Consolidated PDF containing all evaluation plots
 ├── energy_predictor.ipynb       # Exploratory analysis and training notebook
 ├── train.py                     # Command-Line training and inference pipeline
 └── requirements.txt             # Project dependencies
@@ -122,6 +121,18 @@ The trained ANN model is evaluated using four standard regression metrics:
 - **R² Score** (Coefficient of Determination)
 - **MAPE** (Mean Absolute Percentage Error)
 
-Generated plots are stored in `results/`:
-- `training_loss_curve.png`: Shows convergence during training.
-- `actual_vs_predicted.png`: Displays model prediction correlation against actual values.
+Generated evaluation plots are compiled into a single consolidated PDF located at [results/evaluation_plots.pdf](file:///c:/Users/tanis/OneDrive/Desktop/internship%202/ML-CaPsule/ANN_Energy_Consumption_Predictor/results/evaluation_plots.pdf):
+
+### Plot Explanations:
+
+1. **ANN Training & Validation Loss Curve**:
+   - **Purpose**: Displays the training and validation Mean Squared Error (MSE) loss across all epochs.
+   - **Interpretation**: A steadily declining curve where both training and validation losses converge and stabilize indicates that the model is learning effectively. The narrow gap between train and validation losses proves that Batch Normalization and Dropout layers successfully prevented overfitting. The `EarlyStopping` callback automatically terminates training once validation loss stabilizes, ensuring optimal generalization.
+
+2. **Actual vs. Predicted Energy Consumption Scatter Plot**:
+   - **Purpose**: Correlates actual household appliance energy usage (Wh) against values predicted by the model on the test dataset.
+   - **Interpretation**: The closer the data points cluster along the diagonal `y = x` dashed line (Ideal Fit), the higher the accuracy of the model. Strong density along this diagonal shows high correlation, while scattered outliers represent transient, high-energy events that are naturally more volatile to predict.
+
+3. **Time Series Comparison Plot (Jupyter Notebook Only)**:
+   - **Purpose**: Overlay comparison of actual and predicted energy values across the first 100 sequential test samples.
+   - **Interpretation**: Shows how closely the model's predictions follow actual peak and baseline energy usage over time, verifying the model's transient tracking capabilities.

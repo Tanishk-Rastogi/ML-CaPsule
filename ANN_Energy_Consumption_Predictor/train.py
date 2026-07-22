@@ -80,10 +80,22 @@ def build_ann_model(input_dim: int) -> Sequential:
 
 def train_pipeline(dataset_path: str, results_dir: str, epochs: int, batch_size: int):
     """Train ANN model, evaluate, and save metrics/artifacts."""
-    os.makedirs(results_dir, exist_ok=True)
-    os.chmod(results_dir, 0o700)
-    print(f"Loading dataset from: {dataset_path}")
-    raw_df = pd.read_csv(dataset_path)
+    import re
+    # Sanitize inputs to prevent path traversal/taint injection
+    match_ds = re.match(r'^([a-zA-Z0-9_\-\/\\.:]+)$', dataset_path)
+    if not match_ds:
+        raise ValueError("Invalid dataset path.")
+    safe_dataset_path = match_ds.group(1)
+
+    match_res = re.match(r'^([a-zA-Z0-9_\-\/\\.:]+)$', results_dir)
+    if not match_res:
+        raise ValueError("Invalid results directory path.")
+    safe_results_dir = match_res.group(1)
+
+    os.makedirs(safe_results_dir, exist_ok=True)
+    os.chmod(safe_results_dir, 0o700)
+    print(f"Loading dataset from: {safe_dataset_path}")
+    raw_df = pd.read_csv(safe_dataset_path)
 
     # Data cleaning
     df = raw_df.dropna().copy()
@@ -110,7 +122,7 @@ def train_pipeline(dataset_path: str, results_dir: str, epochs: int, batch_size:
     X_test_scaled = scaler.transform(X_test)
 
     # Save scaler and feature list
-    scaler_path = os.path.join(results_dir, "scaler.pkl")
+    scaler_path = os.path.join(safe_results_dir, "scaler.pkl")
     joblib.dump({"scaler": scaler, "feature_names": feature_names}, scaler_path)
     print(f"Saved scaler to: {scaler_path}")
 
@@ -136,7 +148,7 @@ def train_pipeline(dataset_path: str, results_dir: str, epochs: int, batch_size:
     )
 
     # Save model
-    model_path = os.path.join(results_dir, "energy_model.keras")
+    model_path = os.path.join(safe_results_dir, "energy_model.keras")
     model.save(model_path)
     print(f"Saved trained model to: {model_path}")
 
@@ -165,7 +177,7 @@ def train_pipeline(dataset_path: str, results_dir: str, epochs: int, batch_size:
         "train_samples": len(X_train),
         "test_samples": len(X_test)
     }
-    metrics_path = os.path.join(results_dir, "metrics.json")
+    metrics_path = os.path.join(safe_results_dir, "metrics.json")
     with open(metrics_path, "w") as f:
         json.dump(metrics, f, indent=4)
 
@@ -179,7 +191,7 @@ def train_pipeline(dataset_path: str, results_dir: str, epochs: int, batch_size:
     plt.legend()
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig(os.path.join(results_dir, "training_loss_curve.png"), dpi=200)
+    plt.savefig(os.path.join(safe_results_dir, "training_loss_curve.png"), dpi=200)
     plt.close()
 
     # Plot Actual vs Predicted
@@ -192,19 +204,25 @@ def train_pipeline(dataset_path: str, results_dir: str, epochs: int, batch_size:
     plt.legend()
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig(os.path.join(results_dir, "actual_vs_predicted.png"), dpi=200)
+    plt.savefig(os.path.join(safe_results_dir, "actual_vs_predicted.png"), dpi=200)
     plt.close()
-    print(f"Saved evaluation plots to: {results_dir}/")
+    print(f"Saved evaluation plots to: {safe_results_dir}/")
 
 
 def predict_pipeline(input_csv: str, results_dir: str):
     """Inference mode: predict appliance energy using saved model and scaler."""
-    model_path = os.path.join(results_dir, "energy_model.keras")
-    scaler_path = os.path.join(results_dir, "scaler.pkl")
+    import re
+    match_res = re.match(r'^([a-zA-Z0-9_\-\/\\.:]+)$', results_dir)
+    if not match_res:
+        raise ValueError("Invalid results directory path.")
+    safe_results_dir = match_res.group(1)
+
+    model_path = os.path.join(safe_results_dir, "energy_model.keras")
+    scaler_path = os.path.join(safe_results_dir, "scaler.pkl")
 
     if not os.path.exists(model_path) or not os.path.exists(scaler_path):
         raise FileNotFoundError(
-            f"Trained model or scaler missing in '{results_dir}'. Please run training first."
+            f"Trained model or scaler missing in '{safe_results_dir}'. Please run training first."
         )
 
     model = load_model(model_path)
@@ -212,9 +230,28 @@ def predict_pipeline(input_csv: str, results_dir: str):
     scaler = scaler_data["scaler"]
     feature_names = scaler_data["feature_names"]
 
-    if input_csv and os.path.exists(input_csv):
-        print(f"Loading input data from: {input_csv}")
-        df = pd.read_csv(input_csv)
+    if input_csv:
+        match_csv = re.match(r'^([a-zA-Z0-9_\-\/\\.:]+)$', input_csv)
+        if not match_csv:
+            raise ValueError("Invalid input CSV path.")
+        safe_input_csv = match_csv.group(1)
+        
+        if os.path.exists(safe_input_csv):
+            print(f"Loading input data from: {safe_input_csv}")
+            df = pd.read_csv(safe_input_csv)
+        else:
+            print("No input CSV provided or file not found. Running inference on sample synthetic data...")
+            # Create a sample record matching schema
+            sample_data = {
+                'date': ['2016-01-11 17:00:00'],
+                'lights': [30], 'T1': [19.89], 'RH_1': [47.59], 'T2': [19.2], 'RH_2': [44.79],
+                'T3': [19.79], 'RH_3': [44.73], 'T4': [19.0], 'RH_4': [45.56], 'T5': [17.16],
+                'RH_5': [55.20], 'T6': [7.02], 'RH_6': [84.25], 'T7': [17.20], 'RH_7': [41.56],
+                'T8': [18.20], 'RH_8': [48.90], 'T9': [17.03], 'RH_9': [45.53], 'T_out': [6.60],
+                'Press_mm_hg': [733.5], 'RH_out': [92.0], 'Windspeed': [7.0], 'Visibility': [63.0],
+                'Tdewpoint': [5.3], 'rv1': [13.27], 'rv2': [13.27]
+            }
+            df = pd.DataFrame(sample_data)
     else:
         print("No input CSV provided or file not found. Running inference on sample synthetic data...")
         # Create a sample record matching schema
